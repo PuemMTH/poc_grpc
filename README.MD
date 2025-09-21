@@ -1,47 +1,190 @@
-Features Implemented:
+# gRPC Image Service POC
 
-Server (src/server/image_service/main.py)
+Proof of Concept project for gRPC Image Service with REST API Gateway
 
-- Full gRPC ImageService implementation with two endpoints:
-- TestImage: Processes uploaded images, validates format, and returns image metadata
-- Health: Health check endpoint for monitoring
-- Comprehensive error handling and logging
-- Support for multiple image formats (JPEG, PNG, GIF, BMP)
+## Project Structure
 
-CLI Client (src/client/main.py)
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        CLI[CLI Client<br/>src/client/cli]
+        API[API Gateway<br/>src/client/api<br/>FastAPI + REST]
+    end
 
-- Rich terminal interface with colored output
-- Three main commands:
-- health: Check server health status
-- test-image <path>: Upload and test image processing
-- monitor: Monitor server health over time with statistics
-- Auto-detection of image format from file extension
-- Detailed error handling and user feedback
+    subgraph "Server Layer"
+        GRPC[gRPC Server<br/>src/server/image_service<br/>Image Processing]
+    end
 
-Build System (Makefile)
+    subgraph "Protocol"
+        PROTO[Protocol Buffers<br/>src/protos<br/>*.proto files]
+    end
 
-- Automated dependency installation for both client and server
-- Protobuf code generation from .proto files
-- Easy server/client startup commands
-- Clean command for maintenance
+    subgraph "Tools"
+        TOOLS[Code Generation<br/>src/tools<br/>protobuf generators]
+    end
 
-Usage Examples:
+    CLI -->|gRPC| GRPC
+    API -->|gRPC| GRPC
+    PROTO --> TOOLS
+    TOOLS --> CLI
+    TOOLS --> API
+    TOOLS --> GRPC
+```
 
-# Install dependencies
-make install-server
-make install-client
+## Architecture
 
-# Generate protobuf files
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as API Gateway<br/>(FastAPI)
+    participant gRPC as gRPC Server<br/>(Image Service)
+    participant Storage as File Storage
+
+    User->>API: POST /image-service/test-image
+    API->>gRPC: TestImage(image_data, format)
+    gRPC->>gRPC: Process & Validate Image
+    gRPC->>Storage: Save to images/YYYY/MM/DD/
+    Storage-->>gRPC: File saved
+    gRPC-->>API: TestImageResponse
+    API-->>User: JSON Response
+```
+
+## Docker Architecture
+
+```mermaid
+graph LR
+    subgraph "Docker Compose"
+        subgraph "api-service container"
+            FASTAPI[FastAPI Server<br/>Port 8000]
+        end
+
+        subgraph "image-service container"
+            GRPCSERV[gRPC Server<br/>Port 50051]
+        end
+
+        subgraph "Host"
+            STORAGE[File Storage<br/>./images volume]
+        end
+    end
+
+    FASTAPI -->|GRPC_SERVER_ADDRESS<br/>image-service:50051| GRPCSERV
+    GRPCSERV --> STORAGE
+
+    User -->|HTTP :8000| FASTAPI
+```
+
+## File Structure
+
+```
+poc_grpc/
+├── src/
+│   ├── protos/                 # Protocol Buffer definitions
+│   │   └── image_service.proto
+│   ├── server/
+│   │   ├── image_service/      # gRPC Server
+│   │   │   ├── main.py
+│   │   │   ├── Dockerfile
+│   │   │   └── pyproject.toml
+│   │   └── docker-compose.yml  # Docker services
+│   ├── client/
+│   │   ├── cli/               # CLI Client
+│   │   │   ├── main.py
+│   │   │   └── pyproject.toml
+│   │   └── api/               # REST API Gateway
+│   │       ├── main.py
+│   │       ├── Dockerfile
+│   │       ├── image_service/
+│   │       │   ├── client.py  # gRPC Client wrapper
+│   │       │   ├── handlers.py # FastAPI routes
+│   │       │   └── models.py  # Pydantic models
+│   │       └── pyproject.toml
+│   └── tools/                 # Development tools
+│       ├── simple_gen.py      # Python protobuf generator
+│       └── simple_gen.sh      # Shell protobuf generator
+├── Makefile                   # Build automation
+└── README.MD
+```
+
+## Usage
+
+### Prerequisites
+- Python 3.12+
+- uv (Python package manager)
+- Docker & Docker Compose
+
+### Quick Start
+
+```bash
+# 1. Install dependencies
+make install
+
+# 2. Generate protobuf files
 make generate-proto
 
-# Start server (in one terminal)
+# 3. Run with Docker (recommended)
+make monitor
+
+# 4. Test the API
+curl http://localhost:8000/image-service/health
+```
+
+### Available Commands
+
+```bash
+make help                 # Show available commands
+make install             # Install all dependencies
+make generate-proto      # Generate Python files from proto
+make run-server          # Run gRPC server locally
+make run-client          # Run CLI client
+make run-client-api      # Run API Gateway locally
+make monitor             # Start Docker services with logs
+make clean               # Clean generated files
+```
+
+## API Endpoints
+
+### REST API (Port 8000)
+
+- `GET /` - API information
+- `GET /image-service/health` - Health check
+- `POST /image-service/test-image` - Upload and process image
+
+### gRPC Service (Port 50051)
+
+- `Health()` - Service health check
+- `TestImage(image_data, image_format)` - Process image
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GRPC_SERVER_ADDRESS` | `localhost:50051` | gRPC server address for API Gateway |
+
+## Development
+
+### Local Development
+```bash
+# Terminal 1: Run gRPC server
 make run-server
 
-# Test with client (in another terminal)
-cd src/client
-uv run python main.py health
-uv run python main.py test-image /path/to/image.jpg
-uv run python main.py monitor --count 5 --interval 1.0
+# Terminal 2: Run API Gateway
+make run-client-api
+```
 
-The implementation handles all the requirements from your proto file, includes proper
-error handling, and provides a professional CLI experience with rich formatting.
+### Docker Development
+```bash
+# Start all services
+make monitor
+
+# Stop services
+cd src/server && docker-compose down
+```
+
+## File Storage
+
+Images are automatically saved to:
+```
+images/YYYY/MM/DD/UUID.ext
+```
+
+Volume mounted in Docker at `./images` for persistent storage.
