@@ -6,18 +6,17 @@ import logging
 import time
 from PIL import Image
 import io
+from rich.console import Console
+print = Console().print
 
-from protos import image_service_pb2
-from protos import image_service_pb2_grpc
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import image_service_pb2
+import image_service_pb2_grpc
 
 class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
     def TestImage(self, request, context):
         """Test image processing functionality."""
         try:
-            logger.info(f"Received image test request with format: {request.image_format}")
+            print(f"Received image test request with format: {request.image_format}")
 
             # Validate image format
             supported_formats = ['jpeg', 'jpg', 'png', 'gif', 'bmp']
@@ -35,7 +34,18 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
                     mode = img.mode
                     actual_format = img.format
 
-                    logger.info(f"Image processed successfully: {width}x{height}, mode={mode}, format={actual_format}")
+                    print(f"Image processed successfully: {width}x{height}, mode={mode}, format={actual_format}")
+                    
+                    # save to yyy/mm/dd/uuid.ext
+                    save_dir = time.strftime("images/%Y/%m/%d")
+                    os.makedirs(save_dir, exist_ok=True)
+                    import uuid
+                    file_ext = actual_format.lower() if actual_format else request.image_format.lower()
+                    file_name = f"{uuid.uuid4()}.{file_ext}"
+                    file_path = os.path.join(save_dir, file_name)
+                    img.save(file_path)
+                    # logger.info(f"Image saved to {file_path}")
+                    print(f"Image saved to {file_path}")
 
                     return image_service_pb2.TestImageResponse(
                         status="success",
@@ -43,14 +53,14 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
                     )
 
             except Exception as img_error:
-                logger.error(f"Image processing error: {img_error}")
+                print(f"Image processing error: {img_error}")
                 return image_service_pb2.TestImageResponse(
                     status="error",
                     message=f"Failed to process image: {str(img_error)}"
                 )
 
         except Exception as e:
-            logger.error(f"Unexpected error in TestImage: {e}")
+            print(f"Unexpected error in TestImage: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(f"Internal server error: {str(e)}")
             return image_service_pb2.TestImageResponse(
@@ -60,7 +70,7 @@ class ImageServiceServicer(image_service_pb2_grpc.ImageServiceServicer):
 
     def Health(self, request, context):
         """Health check endpoint."""
-        logger.info("Health check requested")
+        print("Health check requested")
         return image_service_pb2.HealthResponse(
             status="healthy",
             message=f"Image service is running. Time: {time.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -75,13 +85,13 @@ def serve(port=50051):
     listen_addr = f'[::]:{port}'
     server.add_insecure_port(listen_addr)
 
-    logger.info(f"Starting gRPC server on {listen_addr}")
+    print(f"Starting gRPC server on {listen_addr}")
     server.start()
 
     try:
         server.wait_for_termination()
     except KeyboardInterrupt:
-        logger.info("Server interrupted by user")
+        print("Server interrupted by user")
         server.stop(grace=5)
 
 

@@ -3,6 +3,6 @@
   "output_folders": [
     "src/client/cli/poc_grpc/protos",
     "src/client/api/protos",
-    "src/server/image_service/protos"
+    "src/server/image_service/"
   ]
 }
