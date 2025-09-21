@@ -1,0 +1,6 @@
+{
+  "input_folder": "src/protos",
+  "output_folders": [
+    "src/generated/image_service"
+  ]
+}
