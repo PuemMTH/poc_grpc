@@ -73,38 +73,6 @@ graph LR
     User -->|HTTP :8000| FASTAPI
 ```
 
-## File Structure
-
-```
-poc_grpc/
-├── src/
-│   ├── protos/                 # Protocol Buffer definitions
-│   │   └── image_service.proto
-│   ├── server/
-│   │   ├── image_service/      # gRPC Server
-│   │   │   ├── main.py
-│   │   │   ├── Dockerfile
-│   │   │   └── pyproject.toml
-│   │   └── docker-compose.yml  # Docker services
-│   ├── client/
-│   │   ├── cli/               # CLI Client
-│   │   │   ├── main.py
-│   │   │   └── pyproject.toml
-│   │   └── api/               # REST API Gateway
-│   │       ├── main.py
-│   │       ├── Dockerfile
-│   │       ├── image_service/
-│   │       │   ├── client.py  # gRPC Client wrapper
-│   │       │   ├── handlers.py # FastAPI routes
-│   │       │   └── models.py  # Pydantic models
-│   │       └── pyproject.toml
-│   └── tools/                 # Development tools
-│       ├── simple_gen.py      # Python protobuf generator
-│       └── simple_gen.sh      # Shell protobuf generator
-├── Makefile                   # Build automation
-└── README.MD
-```
-
 ## Usage
 
 ### Prerequisites
@@ -179,12 +147,3 @@ make monitor
 # Stop services
 cd src/server && docker-compose down
 ```
-
-## File Storage
-
-Images are automatically saved to:
-```
-images/YYYY/MM/DD/UUID.ext
-```
-
-Volume mounted in Docker at `./images` for persistent storage.

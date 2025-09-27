@@ -25,6 +25,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+    scale: 3
     healthcheck:
       test: ["CMD", "python", "-c", "import grpc; import image_service_pb2_grpc; import image_service_pb2; channel = grpc.insecure_channel('localhost:50051'); stub = image_service_pb2_grpc.ImageServiceStub(channel); stub.Health(image_service_pb2.HealthRequest())"]
       interval: 30s
