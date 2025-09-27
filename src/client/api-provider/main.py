@@ -3,11 +3,10 @@ from image_service.handlers import router as image_service_router
 
 app = FastAPI(
     title="Image Service API",
-    description="REST API Gateway for gRPC Image Service",
+    description="API Provider for Image Service using FastAPI",
     version="1.0.0"
 )
 
-# Include image service routes
 app.include_router(image_service_router)
 
 @app.get("/")

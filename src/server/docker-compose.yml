@@ -1,34 +1,57 @@
 version: '3.8'
 
 services:
-  api-service:
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    restart: unless-stopped
+  
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    
+  client-api-provider:
     build:
-      context: ../client/api/
+      context: ../client/api-provider/
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    depends_on:
-      - image-service
     environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CLOUDAMQP_URL=amqp://guest:guest@rabbitmq:5672/%2f
       - PYTHONUNBUFFERED=1
-      - GRPC_SERVER_ADDRESS=image-service:50051
+    depends_on:
+      - redis
+      - rabbitmq
     restart: unless-stopped
 
-  image-service:
-    build:
-      context: ./image_service
-      dockerfile: Dockerfile
-    ports:
-      - "50051:50051"
-    volumes:
-      - ./images:/app/images
-    environment:
-      - PYTHONUNBUFFERED=1
-    restart: unless-stopped
-    scale: 3
-    healthcheck:
-      test: ["CMD", "python", "-c", "import grpc; import image_service_pb2_grpc; import image_service_pb2; channel = grpc.insecure_channel('localhost:50051'); stub = image_service_pb2_grpc.ImageServiceStub(channel); stub.Health(image_service_pb2.HealthRequest())"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+  # # image-service:
+  #   build:
+  #     context: ./image_service
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "50051:50051"
+  #   volumes:
+  #     - ./images:/app/images
+  #   environment:
+  #     - PYTHONUNBUFFERED=1
+  #   restart: unless-stopped
+  #   scale: 3
+  #   healthcheck:
+  #     test: ["CMD", "python", "-c", "import grpc; import image_service_pb2_grpc; import image_service_pb2; channel = grpc.insecure_channel('localhost:50051'); stub = image_service_pb2_grpc.ImageServiceStub(channel); stub.Health(image_service_pb2.HealthRequest())"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 10s

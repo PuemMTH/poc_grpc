@@ -11,6 +11,7 @@ COPY uv.lock ./
 
 # Install dependencies
 RUN uv sync --frozen
+RUN uv cache clean 
 
 # Copy application code
 COPY . .
