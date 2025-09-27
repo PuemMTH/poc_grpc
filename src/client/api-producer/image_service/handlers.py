@@ -59,6 +59,12 @@ async def test_image(
         # Send message to worker queue
         worker_client.send_task(json.dumps(message))
         worker_client.close()
+        
+        redis_client.hset("image_tasks", image_uuid, json.dumps({
+            "status": "queued",
+            "path": str(file_path.absolute()),
+            "timestamp": int(time.time())
+        }))
 
         return {
             "status": "ok",
