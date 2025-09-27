@@ -10,7 +10,7 @@ class WorkerQueueClient(object):
         self.channel = self.connection.channel()
 
         # Declare the queue as durable for persistence
-        self.channel.queue_declare(queue=self.queue_name, durable=True)
+        self.channel.queue_declare(queue=self.queue_name, durable=False)
 
     def send_task(self, body):
         """Send a task to the worker queue"""

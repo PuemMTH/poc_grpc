@@ -2,7 +2,6 @@ import os
 import pika
 import uuid
 
-# export REDIS_HOST=localhost REDIS_PORT=6379 CLOUDAMQP_URL='amqp://guest:guest@localhost:5672/%2f' && uv run main.py
 class RPCClient(object):
     def __init__(self, queue_name):
         self.queue_name = queue_name
