@@ -12,7 +12,7 @@ import sample_service_pb2_grpc
 
 def process_via_grpc(image_uuid, image_path, metadata=None):
     """Process sample data via gRPC sample_service."""
-    grpc_server_address = os.environ.get('SAMPLE_SERVICE_ADDRESS', 'localhost:50052')
+    grpc_server_address = os.environ.get('SAMPLE_SERVICE_ADDRESS')
 
     try:
         with grpc.insecure_channel(grpc_server_address) as channel:
