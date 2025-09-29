@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package sample_service;
+
+service SampleService {
+    rpc ProcessSample(ProcessSampleRequest) returns (ProcessSampleResponse);
+    rpc GetSampleStatus(SampleStatusRequest) returns (SampleStatusResponse);
+    rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message ProcessSampleRequest {
+    string image_uuid = 1;
+    string image_path = 2;
+    map<string, string> metadata = 3; // Additional processing parameters
+}
+
+message ProcessSampleResponse {
+    string status = 1;  // "success", "error", "processing"
+    string message = 2;
+    string process_id = 3; // Unique identifier for this processing job
+    int64 timestamp = 4;
+}
+
+message SampleStatusRequest {
+    string process_id = 1;
+}
+
+message SampleStatusResponse {
+    string status = 1;  // "completed", "processing", "failed", "not_found"
+    string message = 2;
+    string image_uuid = 3;
+    string result_path = 4; // Path to processed result if completed
+    int64 created_at = 5;
+    int64 completed_at = 6;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+    string status = 1;
+    string message = 2;
+}

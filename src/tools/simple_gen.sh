@@ -41,7 +41,7 @@ for output_folder in $OUTPUT_FOLDERS; do
             filename=$(basename "$proto_file")
 
             # Run protoc (need to be in server directory for uv environment)
-            if (cd "$PROJECT_ROOT/src/server/image_service" && uv run python -m grpc_tools.protoc \
+            if (cd "$PROJECT_ROOT/src/server/sample_service" && uv run python -m grpc_tools.protoc \
                 --proto_path="$INPUT_FOLDER" \
                 --python_out="$abs_output_folder" \
                 --grpc_python_out="$abs_output_folder" \

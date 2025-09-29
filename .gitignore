@@ -4,3 +4,4 @@ __pycache__/
 .claude
 src/client/api-provider/uploads/
 src/client/api-producer/uploads/
+src/server/sample_service/processed_samples/

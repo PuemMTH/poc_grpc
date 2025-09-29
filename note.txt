@@ -1,4 +1,4 @@
 # TODO: 
 - implement gRPC to external api 
 - implement list key in redis in consumer
-- implement health check in docker-compose
+- implement health check in docker-composea

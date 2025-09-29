@@ -1,8 +1,7 @@
 {
   "input_folder": "src/protos",
   "output_folders": [
-    "src/client/cli/poc_grpc/protos",
-    "src/client/api/protos",
-    "src/server/image_service/"
+    "src/client/api-consumer/protos",
+    "src/server/sample_service/protos"
   ]
 }
