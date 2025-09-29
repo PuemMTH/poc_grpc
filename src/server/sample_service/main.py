@@ -168,7 +168,7 @@ class SampleServiceServicer(sample_service_pb2_grpc.SampleServiceServicer):
         )
 
 
-def serve(port=50052):
+def serve(port: int):
     """Start the gRPC server."""
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     sample_service_pb2_grpc.add_SampleServiceServicer_to_server(SampleServiceServicer(), server)
@@ -187,9 +187,9 @@ def serve(port=50052):
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='Sample Service gRPC Server')
-    parser.add_argument('--port', type=int, default=50052, help='Port to run the server on')
-    args = parser.parse_args()
-
-    serve(args.port)
+    import os
+    port = int(os.getenv('SAMPLE_SERVICE_PORT'))
+    if not port:
+        print("❌ SAMPLE_SERVICE_PORT environment variable is not set.")
+        exit(1)
+    serve(port=port)

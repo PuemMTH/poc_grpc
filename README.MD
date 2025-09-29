@@ -1,33 +1,49 @@
 # gRPC Image Service POC
 
-Proof of Concept project for gRPC Image Service with REST API Gateway
+## Quick Run Commands
+```bash
+# gRPC Server (port 50052)
+export SAMPLE_SERVICE_PORT=50052 && cd src/server/sample_service/ && uv run main.py
+
+# API Consumer
+export RABBITMQ_HOST=localhost RABBITMQ_PORT=5672 RABBITMQ_QUEUE=image_queue CLOUDAMQP_URL='amqp://guest:guest@localhost:5672/%2f' SAMPLE_SERVICE_ADDRESS='localhost:50052' && cd src/client/api-consumer && uv run main.py
+
+# API Producer (port 8000)
+export REDIS_HOST=localhost REDIS_PORT=6379 CLOUDAMQP_URL='amqp://guest:guest@localhost:5672/%2f' && cd src/client/api-producer && uv run main.py
+```
 
 ## Project Structure
 
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        CLI[CLI Client<br/>src/client/cli]
-        API[API Gateway<br/>src/client/api<br/>FastAPI + REST]
+        PRODUCER[API Producer<br/>src/client/api-producer<br/>Redis + RabbitMQ]
+        CONSUMER[API Consumer<br/>src/client/api-consumer<br/>RabbitMQ + gRPC]
     end
 
     subgraph "Server Layer"
-        GRPC[gRPC Server<br/>src/server/image_service<br/>Image Processing]
+        GRPC[gRPC Server<br/>src/server/sample_service<br/>Sample Service]
+    end
+
+    subgraph "Message Queue"
+        REDIS[Redis<br/>Task Queue]
+        RABBITMQ[RabbitMQ<br/>Message Broker]
     end
 
     subgraph "Protocol"
-        PROTO[Protocol Buffers<br/>src/protos<br/>*.proto files]
+        PROTO[Protocol Buffers<br/>src/protos<br/>sample_service.proto]
     end
 
     subgraph "Tools"
         TOOLS[Code Generation<br/>src/tools<br/>protobuf generators]
     end
 
-    CLI -->|gRPC| GRPC
-    API -->|gRPC| GRPC
+    PRODUCER -->|Publish| REDIS
+    PRODUCER -->|Publish| RABBITMQ
+    CONSUMER -->|Subscribe| RABBITMQ
+    CONSUMER -->|gRPC| GRPC
     PROTO --> TOOLS
-    TOOLS --> CLI
-    TOOLS --> API
+    TOOLS --> CONSUMER
     TOOLS --> GRPC
 ```
 
@@ -36,114 +52,20 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant User
-    participant API as API Gateway<br/>(FastAPI)
-    participant gRPC as gRPC Server<br/>(Image Service)
-    participant Storage as File Storage
+    participant Producer as API Producer<br/>(Port 8000)
+    participant Redis as Redis Queue
+    participant RabbitMQ as RabbitMQ Broker
+    participant Consumer as API Consumer
+    participant gRPC as gRPC Server<br/>(Sample Service)
 
-    User->>API: POST /image-service/test-image
-    API->>gRPC: TestImage(image_data, format)
-    gRPC->>gRPC: Process & Validate Image
-    gRPC->>Storage: Save to images/YYYY/MM/DD/
-    Storage-->>gRPC: File saved
-    gRPC-->>API: TestImageResponse
-    API-->>User: JSON Response
-```
+    User->>Producer: HTTP Request
+    Producer->>Redis: Publish Task
+    Producer->>RabbitMQ: Publish Message
+    Producer-->>User: Task Queued Response
 
-## Docker Architecture
-
-```mermaid
-graph LR
-    subgraph "Docker Compose"
-        subgraph "api-service container"
-            FASTAPI[FastAPI Server<br/>Port 8000]
-        end
-
-        subgraph "image-service container"
-            GRPCSERV[gRPC Server<br/>Port 50051]
-        end
-
-        subgraph "Host"
-            STORAGE[File Storage<br/>./images volume]
-        end
-    end
-
-    FASTAPI -->|GRPC_SERVER_ADDRESS<br/>image-service:50051| GRPCSERV
-    GRPCSERV --> STORAGE
-
-    User -->|HTTP :8000| FASTAPI
-```
-
-## Usage
-
-### Prerequisites
-- Python 3.12+
-- uv (Python package manager)
-- Docker & Docker Compose
-
-### Quick Start
-
-```bash
-# 1. Install dependencies
-make install
-
-# 2. Generate protobuf files
-make generate-proto
-
-# 3. Run with Docker (recommended)
-make monitor
-
-# 4. Test the API
-curl http://localhost:8000/image-service/health
-```
-
-### Available Commands
-
-```bash
-make help                 # Show available commands
-make install             # Install all dependencies
-make generate-proto      # Generate Python files from proto
-make run-server          # Run gRPC server locally
-make run-client          # Run CLI client
-make run-client-api      # Run API Gateway locally
-make monitor             # Start Docker services with logs
-make clean               # Clean generated files
-```
-
-## API Endpoints
-
-### REST API (Port 8000)
-
-- `GET /` - API information
-- `GET /image-service/health` - Health check
-- `POST /image-service/test-image` - Upload and process image
-
-### gRPC Service (Port 50051)
-
-- `Health()` - Service health check
-- `TestImage(image_data, image_format)` - Process image
-
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `GRPC_SERVER_ADDRESS` | `localhost:50051` | gRPC server address for API Gateway |
-
-## Development
-
-### Local Development
-```bash
-# Terminal 1: Run gRPC server
-make run-server
-
-# Terminal 2: Run API Gateway
-make run-client-api
-```
-
-### Docker Development
-```bash
-# Start all services
-make monitor
-
-# Stop services
-cd src/server && docker-compose down
+    Consumer->>RabbitMQ: Subscribe/Consume
+    RabbitMQ-->>Consumer: Message Received
+    Consumer->>gRPC: Process Request
+    gRPC-->>Consumer: Response
+    Consumer->>Consumer: Handle Result
 ```
