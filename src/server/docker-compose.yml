@@ -21,7 +21,19 @@ services:
         limits:
           memory: 512M
     
-  client-api-producer:
+  sample-service:
+    build:
+      context: ./sample_service/
+      dockerfile: Dockerfile
+    expose:
+      - "50052"
+    environment:
+      - SAMPLE_SERVICE_PORT=50052
+    restart: unless-stopped
+    volumes:
+      - ./sample_service/processed_samples:/app/processed_samples
+
+  api-producer:
     build:
       context: ../client/api-producer/
       dockerfile: Dockerfile
@@ -35,4 +47,18 @@ services:
     depends_on:
       - redis
       - rabbitmq
+    restart: unless-stopped
+
+  api-consumer:
+    build:
+      context: ../client/api-consumer/
+      dockerfile: Dockerfile
+    environment:
+      - CLOUDAMQP_URL=amqp://guest:guest@rabbitmq:5672/%2f
+      - RABBITMQ_QUEUE=image_queue
+      - SAMPLE_SERVICE_ADDRESS=sample-service:50052
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - rabbitmq
+      - sample-service
     restart: unless-stopped

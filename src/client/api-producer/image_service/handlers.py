@@ -93,3 +93,22 @@ async def health_check():
     except redis.exceptions.ConnectionError:
         raise HTTPException(status_code=503, detail="Redis service is unavailable")
 
+@router.get("/tasks")
+async def get_all_tasks():
+    try:
+        tasks = redis_client.hgetall("image_tasks")
+        result = {}
+        for key, value in tasks.items():
+            task_id = key.decode('utf-8')
+            task_data = json.loads(value.decode('utf-8'))
+            result[task_id] = task_data
+
+        return {
+            "status": "ok",
+            "total_tasks": len(result),
+            "tasks": result
+        }
+    except Exception as e:
+        print(f"[red]Error in get_all_tasks: {type(e).__name__}: {str(e)}[/red]")
+        raise HTTPException(status_code=500, detail=str(e))
+

@@ -1,5 +1,26 @@
 # gRPC Image Service POC
 
+## Overview
+```mermaid
+graph TB
+    Client[Client/User<br/>HTTP/REST<br/>Port: 8000] -->|POST /process<br/>JSON Payload| Producer[API Producer<br/>FastAPI + Uvicorn<br/>python:3.12-slim]
+
+    Producer -->|SET task_id:result<br/>redis-py| Redis[(Redis 7.0<br/>Port: 6379<br/>In-Memory Cache)]
+    Producer -->|PUBLISH exchange:image_queue<br/>pika/AMQP 0-9-1| RabbitMQ[RabbitMQ 3.13<br/>Port: 5672 AMQP<br/>Port: 15672 Management<br/>Message Broker]
+
+    RabbitMQ -->|CONSUME queue:image_queue<br/>Basic.Consume| Consumer[API Consumer<br/>Python Consumer<br/>pika + grpcio]
+
+    Consumer -->|UnaryCall: ProcessSample<br/>HTTP/2 + Protobuf<br/>gRPC Channel| LB{Docker Internal DNS<br/>sample-service<br/>Client-Side LB}
+
+    LB -->|Round Robin<br/>gRPC Stream| SS1[Sample Service 1<br/>Python gRPC Server<br/>Port: 50052<br/>Replica 1/3]
+    LB -->|Round Robin<br/>gRPC Stream| SS2[Sample Service 2<br/>Python gRPC Server<br/>Port: 50052<br/>Replica 2/3]
+    LB -->|Round Robin<br/>gRPC Stream| SS3[Sample Service 3<br/>Python gRPC Server<br/>Port: 50052<br/>Replica 3/3]
+
+    SS1 -.->|Write Binary<br/>File I/O| Vol[/Docker Volume<br/>./processed_samples<br/>Persistent Storage/]
+    SS2 -.->|Write Binary<br/>File I/O| Vol
+    SS3 -.->|Write Binary<br/>File I/O| Vol
+```
+
 ## Quick Run Commands
 ```bash
 # gRPC Server (port 50052)
